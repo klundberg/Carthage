@@ -588,8 +588,8 @@ public final class Project { // swiftlint:disable:this type_body_length
 	private func removeItem(at url: URL) -> SignalProducer<(), CarthageError> {
 		return SignalProducer {
 			Result(at: url, attempt: FileManager.default.removeItem(at:))
-		}
-	}
+				}
+			}
 
 	/// Installs binaries and debug symbols for the given project, if available.
 	///
@@ -806,7 +806,7 @@ public final class Project { // swiftlint:disable:this type_body_length
 			.reduce(into: [:]) { (working: inout DependencyGraph, next: DependencyGraph) in
 				for (key, value) in next {
 					working.updateValue(value, forKey: key)
-				}
+			}
 			}
 			.flatMap(.latest) { (graph: DependencyGraph) -> SignalProducer<(Dependency, PinnedVersion), CarthageError> in
 				let dependenciesToInclude = Set(graph
@@ -1150,6 +1150,21 @@ private func symlinkBuildPath(for dependency: Dependency, rootDirectoryURL: URL)
 	}
 }
 
+private func pruneUnusedCheckouts(_ dependencies: [Dependency], directoryURL: URL) {
+	let dependencyPaths = dependencies.map { $0.relativePath }
+	let checkoutsDirectory = directoryURL.appendingPathComponent(carthageProjectCheckoutsPath, isDirectory: true)
+
+	let resolvedCheckouts = Set(dependencyPaths.map { directoryURL.appendingPathComponent($0, isDirectory: true) })
+
+	guard let allCheckouts = try? Set(FileManager.default.contentsOfDirectory(at: checkoutsDirectory, includingPropertiesForKeys: nil, options: [])) else {
+		return
+	}
+
+	for url in allCheckouts.subtracting(resolvedCheckouts) {
+		try? FileManager.default.removeItem(at: url)
+	}
+}
+
 /// Constructs a file URL to where the binary corresponding to the given
 /// arguments should live.
 private func fileURLToCachedBinary(_ dependency: Dependency, _ release: Release, _ asset: Release.Asset) -> URL {
@@ -1413,7 +1428,7 @@ public func cloneOrFetch(
 				try fileManager.createDirectory(at: $0, withIntermediateDirectories: true)
 				return dependency.gitURL(preferHTTPS: preferHTTPS)!
 			})
-		}
+			}
 		.flatMap(.merge) { (remoteURL: GitURL) -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
 			return isGitRepository(repositoryURL)
 				.flatMap(.merge) { isRepository -> SignalProducer<(ProjectEvent?, URL), CarthageError> in
